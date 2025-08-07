@@ -8,7 +8,7 @@ CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vShgIQLk5ObcBTzPmZkQl
 
 def get_all_data():
     try:
-        df = pd.read_csv(CSV_URL)
+        df = pd.read_csv(CSV_URL, dtype=str)
         df.fillna("", inplace=True)
         return df
     except Exception as e:
