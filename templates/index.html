@@ -25,13 +25,10 @@
   <h1>📋 Site Summary Report</h1>
 
   <form method="POST">
-    <label for="site">Select Site Name:</label>
-    <select name="site" id="site" required>
-      <option value="">-- Choose Site --</option>
-      {% for site in site_names %}
-        <option value="{{ site }}" {% if site == selected_site %}selected{% endif %}>{{ site }}</option>
-      {% endfor %}
-    </select>
+<label for="date">Select Date:</label>
+<input type="date" name="date" id="date" required>
+<button type="submit">Generate Summary</button>
+
     <button type="submit">Generate Summary</button>
   </form>
 
