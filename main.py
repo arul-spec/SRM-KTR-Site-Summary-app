@@ -28,16 +28,19 @@ def get_summary_for_site(df, site_name):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+   def index():
     df = get_all_data()
-    site_names = get_site_names(df)
-    selected_site = None
+    selected_date = None
     summary = None
 
     if request.method == 'POST':
-        selected_site = request.form.get('site')
-        summary = get_summary_for_site(df, selected_site)
+        selected_date = request.form.get('date')
+        if selected_date:
+            # Assuming your CSV has a column 'Date' in DD-MM-YYYY format
+            match = df[df['Date'] == selected_date]
+            summary = match.iloc[0].to_dict() if not match.empty else None
 
-    return render_template('index.html', site_names=site_names, selected_site=selected_site, summary=summary)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    return render_template(
+        'index.html',
+        selected_date=selected_date,
+        summary=summary
