@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Site Summary</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background-color: #f9f9f9;
+    }
+    select, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    .summary {
+      margin-top: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>📋 Site Summary Report</h1>
+
+  <form method="POST">
+    <label for="site">Select Site Name:</label>
+    <select name="site" id="site" required>
+      <option value="">-- Choose Site --</option>
+      {% for site in site_names %}
+        <option value="{{ site }}" {% if site == selected_site %}selected{% endif %}>{{ site }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Generate Summary</button>
+  </form>
+
+  {% if summary %}
+    <div class="summary">
+      <h2>Summary for {{ selected_site }}</h2>
+      <ul>
+        {% for key, value in summary.items() %}
+          <li><strong>{{ key }}:</strong> {{ value }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% elif selected_site %}
+    <p>No data found for the selected site.</p>
+  {% endif %}
+</body>
+</html>
