@@ -1,32 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Site Summary Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 30px; }
-        .summary-box { border: 1px solid #ccc; padding: 20px; margin-top: 20px; background: #f9f9f9; }
-        .summary-title { font-weight: bold; font-size: 18px; }
-    </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Ticket Comparison Dashboard</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; padding: 18px; max-width: 1000px; margin:auto; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .box { background:#fff; padding:12px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-top:12px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:8px; border:1px solid #eee; text-align:left; }
+    .num { text-align:right; }
+    .dev-pos { color:green } .dev-neg { color:red }
+  </style>
 </head>
 <body>
-    <h2>📋 Site Summary Report</h2>
-    <form method="POST">
-        <label for="date">Select Date:</label>
-        <input type="date" name="date" required value="{{ selected_date }}">
-        <button type="submit">Generate Summary</button>
-    </form>
+  <h1>📊 Ticket Comparison Dashboard</h1>
 
-    {% if summary %}
-        <div class="summary-box">
-            <div class="summary-title">Summary for {{ selected_date }}</div>
-            <ul>
-                {% for key, value in summary.items() %}
-                    <li><strong>{{ key }}:</strong> {{ value }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% elif selected_date %}
-        <p>No summary found for {{ selected_date }}</p>
+  <form method="post" id="mainForm">
+    <div class="row">
+      <label>Filter by Site:
+        <select id="siteSelect" name="site">
+          <option value="">-- All Sites --</option>
+          {% for s in site_names %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>Choose Ticket:
+        <select id="ticketSelect" name="ticket">
+          <option value="">-- Choose Ticket --</option>
+          {% for t in ticket_ids %}
+            <option value="{{ t }}" data-site="">
+              {{ t }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <input type="hidden" name="action" id="actionField" value="compare">
+      <button type="button" onclick="doCompare()">Compare Ticket</button>
+      <button type="button" onclick="doAll()">Show All</button>
+    </div>
+  </form>
+
+  <div id="resultArea">
+    {% if comparison %}
+      <div class="box">
+        <h3>Ticket: {{ comparison['Ticket ID'] }} — Site: {{ comparison['Site'] }}</h3>
+
+        <h4>Numeric fields (Reported / Billable / Deviation)</h4>
+        <table>
+          <tr><th>Field</th><th class="num">Reported</th><th class="num">Billable</th><th class="num">Deviation</th></tr>
+          {% for key in comparable_fields %}
+            {% if key in comparison['Reported'] or key in comparison['Billable'] %}
+              {% set r = comparison['Reported'].get(key, '') %}
+              {% set b = comparison['Billable'].get(key, '') %}
+              {% set d = comparison['Deviation'].get(key, '') %}
+              <tr>
+                <td>{{ key }}</td>
+                <td class="num">{{ r }}</td>
+                <td class="num">{{ b }}</td>
+                <td class="num">
+                  {% if d is number %}
+                    <span class="{{ 'dev-pos' if d>=0 else 'dev-neg' }}">{{ '%.2f'|format(d) }}</span>
+                  {% else %}
+                    {{ d }}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </table>
+
+        <h4>Other fields</h4>
+        <table>
+          <tr><th>Field</th><th>Reported</th><th>Billable</th></tr>
+          {% for k,v in comparison['Reported'].items() %}
+            {% if k not in comparable_fields %}
+              <tr><td>{{ k }}</td><td>{{ v }}</td><td>{{ comparison['Billable'].get(k,'') }}</td></tr>
+            {% endif %}
+          {% endfor %}
+        </table>
+      </div>
     {% endif %}
+
+    {% if all_table %}
+      <div class="box">
+        <h3>All Tickets - Deviations</h3>
+        <table>
+          <tr>
+            <th>Ticket ID</th>
+            <th>Site</th>
+            {% for c in all_table['columns'][2:] %}
+              <th class="num">{{ c }} Δ</th>
+            {% endfor %}
+          </tr>
+          {% for row in all_table['rows'] %}
+            <tr>
+              <td>{{ row['Ticket ID'] }}</td>
+              <td>{{ row['Site'] }}</td>
+              {% for c in all_table['columns'][2:] %}
+                {% set v = row.get(c, 0) %}
+                <td class="num">{{ '%.2f'|format(v) }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+<script>
+  // client-side: filter tickets by site (we provide ticket data through server-side)
+  // For this to work nicely, it would be better if ticket options had data-site; but we handled minimal approach:
+  // We'll request server side if user picks a site and wants to show All (server-side filtering done).
+  function doCompare(){
+    document.getElementById('actionField').value = 'compare';
+    document.getElementById('mainForm').submit();
+  }
+  function doAll(){
+    document.getElementById('actionField').value = 'all';
+    document.getElementById('mainForm').submit();
+  }
+</script>
 </body>
 </html>
