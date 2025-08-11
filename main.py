@@ -10,17 +10,48 @@ CSV_URL_BILLABLE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vShgIQLk5Obc
 
 # Helper: load CSV as strings to avoid dtype issues
 def load_csv(url):
+   import requests, csv, io, pandas as pd
+
+def load_csv(url):
     try:
-        df = pd.read_csv(url, dtype=str)
-        df = df.fillna("")  # empty strings for missing
-        # Normalize column names (strip)
+        text = requests.get(url, timeout=15).text
+    except Exception as e:
+        print("Error fetching CSV:", e)
+        return pd.DataFrame()
+
+    # Try csv.DictReader (handles quoted fields/newlines well if CSV is valid)
+    try:
+        f = io.StringIO(text)
+        reader = csv.DictReader(f)
+        rows = list(reader)  # if this fails, exception raised
+        df = pd.DataFrame(rows).astype(str).fillna("")
         df.columns = [c.strip() for c in df.columns]
         if 'Date' in df.columns:
-            # try to convert Date column to date objects for equality checks if needed
             df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.date
         return df
-    except Exception as e:
-        print("Error loading CSV:", e)
+    except Exception as e_csv:
+        print("csv.DictReader failed:", e_csv)
+        # Attempt to detect problematic lines for debugging
+        lines = text.splitlines()
+        header_len = len(lines[0].split(','))
+        bad = []
+        for i, line in enumerate(lines[1:], start=2):
+            if line.count(',') + 1 != header_len:
+                bad.append((i, line[:300]))  # show line number + a snippet
+                if len(bad) >= 10:
+                    break
+        print("Detected suspicious lines (line_no, snippet):", bad[:10])
+
+    # Final fallback: pandas with python engine and skip bad lines
+    try:
+        df = pd.read_csv(io.StringIO(text), dtype=str, engine='python', on_bad_lines='skip')
+        df.fillna("", inplace=True)
+        df.columns = [c.strip() for c in df.columns]
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.date
+        return df
+    except Exception as e_pd:
+        print("Pandas fallback failed:", e_pd)
         return pd.DataFrame()
 
 # Derive list of sites and ticket ids
